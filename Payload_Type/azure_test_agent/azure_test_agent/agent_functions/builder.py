@@ -79,7 +79,7 @@ class AzureTestAgent(PayloadType):
 
                     aes_key_param = params.get("AESPSK", "")
                     if isinstance(aes_key_param, dict):
-                        aes_key = aes_key_param.get("enc_key", "") or aes_key_param.get("value", "")
+                        aes_key = aes_key_param.get("enc_key", "")
                     else:
                         aes_key = str(aes_key_param) if aes_key_param else ""
 

