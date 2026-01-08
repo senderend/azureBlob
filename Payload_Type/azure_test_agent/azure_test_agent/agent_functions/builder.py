@@ -23,7 +23,6 @@ class AzureTestAgent(PayloadType):
     mythic_encrypts = True
     translation_container = None
     agent_type = "agent"
-    message_format = "json"
     agent_path = Path(".") / "azure_test_agent" / "agent_code"
     agent_code_path = Path(".") / "azure_test_agent" / "agent_code"
     agent_icon_path = None

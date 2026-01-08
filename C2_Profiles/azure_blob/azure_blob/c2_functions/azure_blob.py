@@ -22,7 +22,6 @@ class AzureBlob(C2Profile):
             description="Storage Account Key (server-side only - NEVER sent to agent)",
             default_value="",
             required=True,
-            crypto_type=True,
         ),
         C2ProfileParameter(
             name="callback_interval",
@@ -80,7 +79,7 @@ class AzureBlob(C2Profile):
         """Validate configuration - CANNOT modify parameters"""
         response = C2OPSECMessageResponse(Success=True)
 
-        params = inputMsg.parameters
+        params = inputMsg.Parameters
         if not params.get("storage_account"):
             response.Success = False
             response.Error = "Storage account name is required"
