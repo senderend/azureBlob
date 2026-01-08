@@ -58,14 +58,14 @@ class AzureTestAgent(PayloadType):
 
             with open(agent_template_path, "r") as f:
                 agent_code = f.read()
-
+            killdate = None
             # Process C2 profiles
             for c2 in self.c2info:
                 profile_name = c2.get_c2profile()["name"]
 
                 if profile_name == "azure_blob":
                     params = c2.get_parameters_dict()
-
+                    killdate = params.get("killdate", None)
                     storage_account = params.get("storage_account", "")
                     account_key_param = params.get("account_key", "")
                     # crypto_type params return dict with enc_key/dec_key
@@ -122,6 +122,7 @@ class AzureTestAgent(PayloadType):
 
                     # Generate container-scoped SAS token
                     # Permissions: read, write, list, add, create (NO delete)
+                    expiration_date = datetime.strptime(killdate, "%Y-%m-%d")
                     sas_token = generate_container_sas(
                         account_name=storage_account,
                         container_name=container_name,
@@ -129,13 +130,15 @@ class AzureTestAgent(PayloadType):
                         permission=ContainerSasPermissions(
                             read=True,
                             write=True,
-                            delete=False,
+                            delete=True,
                             list=True,
                             add=True,
                             create=True,
                         ),
-                        expiry=datetime.utcnow() + timedelta(days=365),
+                        expiry=expiration_date,
                     )
+                    print(f"[*] SAS token: {sas_token}")
+                    print(f"[*] Container Name: {container_name}")
 
                     blob_endpoint = f"https://{storage_account}.blob.core.windows.net"
 

