@@ -131,7 +131,7 @@ class AzureBlobServer:
 
     async def poll_loop(self):
         """Main polling loop"""
-        print(f"[*] Azure Blob Storage C2 Server started")
+        print("[*] Azure Blob Storage C2 Server started")
         print(f"[*] Storage Account: {self.storage_account}")
         print(f"[*] Mythic Address: {self.mythic_address}")
         print(f"[*] Poll Interval: {self.poll_interval}s")

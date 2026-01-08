@@ -9,7 +9,7 @@ class AzureBlob(C2Profile):
     is_p2p = False
     is_server_routed = False
     server_folder_path = Path(".") / "azure_blob" / "c2_code"
-    server_binary_path = server_folder_path / "server"
+    server_binary_path = server_folder_path / "server.py"
     parameters = [
         C2ProfileParameter(
             name="storage_account",
