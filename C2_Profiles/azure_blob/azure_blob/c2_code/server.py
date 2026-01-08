@@ -83,8 +83,8 @@ class AzureBlobServer:
                 try:
                     blob_client = container_client.get_blob_client(blob.name)
                     data = blob_client.download_blob().readall()
-                    # Delete processed response
-                    #blob_client.delete_blob()
+                    # Delete processed message
+                    blob_client.delete_blob()
                     # Forward to Mythic
                     print(f"[*] mythic message: {base64.b64decode(data).decode()}")
                     response = await self.forward_to_mythic(data)
