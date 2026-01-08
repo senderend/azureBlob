@@ -25,7 +25,7 @@ class AzureTestAgent(PayloadType):
     agent_type = "agent"
     agent_path = Path(".") / "azure_test_agent" / "agent_code"
     agent_code_path = Path(".") / "azure_test_agent" / "agent_code"
-    agent_icon_path = None
+    agent_icon_path = Path(".") / "azure_test_agent" / "pegasus.svg"
 
     c2_profiles = ["azure_blob"]
 
