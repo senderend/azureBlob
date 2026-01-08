@@ -15,7 +15,9 @@ class ShellArguments(TaskArguments):
         ]
 
     async def parse_arguments(self):
-        if len(self.command_line) > 0:
+        if len(self.command_line) > 0 and self.command_line[0] == "{":
+            self.load_args_from_json_string(self.command_line)
+        elif len(self.command_line) > 0:
             self.add_arg("command", self.command_line)
         else:
             raise ValueError("Missing command to execute")
