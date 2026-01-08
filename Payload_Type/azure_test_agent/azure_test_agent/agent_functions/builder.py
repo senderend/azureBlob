@@ -88,65 +88,25 @@ class AzureTestAgent(PayloadType):
                         resp.build_stderr = "Missing storage_account or account_key"
                         return resp
 
-                    # Generate unique container name
-                    container_name = f"agent-{self.uuid[:12].lower()}"
-
-                    # Step 1: Provision Azure container
+                    config_data = await SendMythicRPCOtherServiceRPC(MythicRPCOtherServiceRPCMessage(
+                        ServiceName="azure_blob",
+                        ServiceRPCFunction="generate_config",
+                        ServiceRPCFunctionArguments={
+                            "killdate": killdate,
+                            "storage_account": storage_account,
+                            "account_key": account_key,
+                            "payload_uuid": self.uuid
+                        }
+                    ))
+                    if not config_data.Success:
+                        resp.status = BuildStatus.Error
+                        resp.build_stderr = f"Build failed: {config_data.Error}"
+                        return resp
                     await SendMythicRPCPayloadUpdatebuildStep(
                         MythicRPCPayloadUpdateBuildStepMessage(
                             PayloadUUID=self.uuid,
                             StepName="Provisioning Azure Container",
-                            StepStdout=f"Creating container: {container_name}",
-                            StepSuccess=True
-                        )
-                    )
-
-                    # Create container
-                    connection_string = (
-                        f"DefaultEndpointsProtocol=https;"
-                        f"AccountName={storage_account};"
-                        f"AccountKey={account_key};"
-                        f"EndpointSuffix=core.windows.net"
-                    )
-
-                    try:
-                        blob_service = BlobServiceClient.from_connection_string(connection_string)
-                        blob_service.create_container(container_name)
-                    except Exception as e:
-                        if "ContainerAlreadyExists" in str(e):
-                            pass  # Container exists, that's fine
-                        else:
-                            resp.status = BuildStatus.Error
-                            resp.build_stderr = f"Failed to create container: {e}"
-                            return resp
-
-                    # Generate container-scoped SAS token
-                    # Permissions: read, write, list, add, create (NO delete)
-                    expiration_date = datetime.strptime(killdate, "%Y-%m-%d")
-                    sas_token = generate_container_sas(
-                        account_name=storage_account,
-                        container_name=container_name,
-                        account_key=account_key,
-                        permission=ContainerSasPermissions(
-                            read=True,
-                            write=True,
-                            delete=True,
-                            list=True,
-                            add=True,
-                            create=True,
-                        ),
-                        expiry=expiration_date,
-                    )
-                    print(f"[*] SAS token: {sas_token}")
-                    print(f"[*] Container Name: {container_name}")
-
-                    blob_endpoint = f"https://{storage_account}.blob.core.windows.net"
-
-                    await SendMythicRPCPayloadUpdatebuildStep(
-                        MythicRPCPayloadUpdateBuildStepMessage(
-                            PayloadUUID=self.uuid,
-                            StepName="Provisioning Azure Container",
-                            StepStdout=f"Container provisioned with scoped SAS token\nEndpoint: {blob_endpoint}",
+                            StepStdout=f"Container provisioned with scoped SAS token\nEndpoint: {config_data.Result['blob_endpoint']}",
                             StepSuccess=True
                         )
                     )
@@ -162,9 +122,9 @@ class AzureTestAgent(PayloadType):
                     )
 
                     # Replace placeholders (account_key NEVER goes to agent)
-                    agent_code = agent_code.replace("BLOB_ENDPOINT_PLACEHOLDER", blob_endpoint)
-                    agent_code = agent_code.replace("CONTAINER_NAME_PLACEHOLDER", container_name)
-                    agent_code = agent_code.replace("CONTAINER_SAS_PLACEHOLDER", sas_token)
+                    agent_code = agent_code.replace("BLOB_ENDPOINT_PLACEHOLDER", config_data.Result['blob_endpoint'])
+                    agent_code = agent_code.replace("CONTAINER_NAME_PLACEHOLDER", config_data.Result['container_name'])
+                    agent_code = agent_code.replace("CONTAINER_SAS_PLACEHOLDER", config_data.Result['sas_token'])
                     agent_code = agent_code.replace("CALLBACK_INTERVAL_PLACEHOLDER", callback_interval)
                     agent_code = agent_code.replace("CALLBACK_JITTER_PLACEHOLDER", callback_jitter)
                     agent_code = agent_code.replace("AGENT_UUID_PLACEHOLDER", self.uuid)

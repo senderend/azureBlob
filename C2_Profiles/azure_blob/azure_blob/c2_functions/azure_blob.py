@@ -1,6 +1,71 @@
 from mythic_container.C2ProfileBase import *
 from pathlib import Path
+from azure.storage.blob import BlobServiceClient, generate_container_sas, ContainerSasPermissions
+from datetime import datetime
 
+async def generate_config(input: C2OtherServiceRPCMessage) -> C2OtherServiceRPCMessageResponse:
+    # Generate unique container name
+    storage_account = input.ServiceRPCFunctionArguments.get("storage_account", None)
+    account_key = input.ServiceRPCFunctionArguments.get("account_key", None)
+    payload_uuid = input.ServiceRPCFunctionArguments.get("payload_uuid", None)
+    killdate = input.ServiceRPCFunctionArguments.get("killdate", None)
+    if storage_account == None or account_key == None or payload_uuid == None or killdate == None:
+        return C2OtherServiceRPCMessageResponse(
+            Success=False,
+            Error=f"[*] Missing a required parameter: storage_account, account_key, payload_uuid, or killdate",
+        )
+    container_name = f"agent-{payload_uuid[:12].lower()}"
+
+    # Create container
+    connection_string = (
+        f"DefaultEndpointsProtocol=https;"
+        f"AccountName={storage_account};"
+        f"AccountKey={account_key};"
+        f"EndpointSuffix=core.windows.net"
+    )
+
+    try:
+        blob_service = BlobServiceClient.from_connection_string(connection_string)
+        blob_service.create_container(container_name)
+    except Exception as e:
+        if "ContainerAlreadyExists" in str(e):
+            pass  # Container exists, that's fine
+        else:
+            return C2OtherServiceRPCMessageResponse(
+                Success=False,
+                Error=f"[*] Error {e}",
+            )
+
+    # Generate container-scoped SAS token
+    # Permissions: read, write, list, add, create (NO delete)
+    expiration_date = datetime.strptime(killdate, "%Y-%m-%d")
+    sas_token = generate_container_sas(
+        account_name=storage_account,
+        container_name=container_name,
+        account_key=account_key,
+        permission=ContainerSasPermissions(
+            read=True,
+            write=True,
+            delete=True,
+            list=True,
+            add=True,
+            create=True,
+        ),
+        expiry=expiration_date,
+    )
+    print(f"[*] SAS token: {sas_token}")
+    print(f"[*] Container Name: {container_name}")
+
+    blob_endpoint = f"https://{storage_account}.blob.core.windows.net"
+
+    return C2OtherServiceRPCMessageResponse(
+        Success=True,
+        Result={
+            "blob_endpoint": blob_endpoint,
+            "sas_token": sas_token,
+            "container_name": container_name,
+        }
+    )
 
 class AzureBlob(C2Profile):
     name = "azure_blob"
@@ -61,6 +126,9 @@ class AzureBlob(C2Profile):
             required=False,
         ),
     ]
+    custom_rpc_functions = {
+        "generate_config": generate_config
+    }
 
     async def opsec(self, inputMsg: C2OPSECMessage) -> C2OPSECMessageResponse:
         """Validate configuration - CANNOT modify parameters"""

