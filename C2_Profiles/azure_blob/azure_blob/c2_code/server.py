@@ -58,7 +58,7 @@ class AzureBlobServer:
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.post(
-                    f"{self.mythic_address}/agent_message",
+                    f"{self.mythic_address}",
                     data=message,
                     headers={
                         "Content-Type": "application/octet-stream",
