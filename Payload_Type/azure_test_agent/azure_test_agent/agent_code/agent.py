@@ -129,7 +129,7 @@ class AzureBlobAgent:
         """Build post response for Mythic"""
         return {
             "action": "post_response",
-            "responses": [response],
+            "responses": response,
         }
 
     def _get_ips(self) -> list:
@@ -250,7 +250,8 @@ class AzureBlobAgent:
                         response = self.execute_task(task)
                         response_data.append(response)
                 # Post response
-                data = self.postMessageAndRetrieveResponseBlob(self.build_post_response(response))
+                if response_data:
+                    data = self.postMessageAndRetrieveResponseBlob(self.build_post_response(response_data))
                 time.sleep(self.get_sleep_time())
 
             except Exception as e:
