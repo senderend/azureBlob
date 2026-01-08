@@ -181,8 +181,10 @@ python3 agent.py
 [*] Endpoint: https://mythicc2storage.blob.core.windows.net
 [*] Container: agent-abc123def456
 [*] Interval: 30s (jitter: 10%)
-[*] Checking in as <uuid>
-[+] Checkin blob written
+[*] checking for sta/f500bdc6-9c2e-41c0-8a59-10a1e3cf0119.blob: b'...'
+[*] Received sta message: {'id': '...', 'status': 'success', 'action': 'checkin'}
+[+] new UUID: 12b28168-f474-4f17-b522-9991a0eb831f
+[*] starting main loop
 ```
 
 ### Expected Output (Mythic C2 Server Logs)
@@ -190,8 +192,14 @@ python3 agent.py
 ```
 [*] Azure Blob Storage C2 Server started
 [*] Storage Account: mythicc2storage
+[*] Mythic Address: http://127.0.0.1:17443/agent_message
+[*] Poll Interval: 5s
 [+] Discovered new agent container: agent-abc123def456
-[+] Processed checkin from agent-abc123def456
+[*] blob name: ats/f500bdc6-9c2e-41c0-8a59-10a1e3cf0119.blob
+[*] mythic message: 097e4be2-a789...{"action":"checkin",...}
+[*] mythic response: 097e4be2-a789...{"id":"...","status":"success","action":"checkin"}
+[*] writing response to: sta/f500bdc6-9c2e-41c0-8a59-10a1e3cf0119.blob
+[+] Processed response from agent-abc123def456: ats/f500bdc6-9c2e-41c0-8a59-10a1e3cf0119.blob
 ```
 
 ---

@@ -31,13 +31,13 @@ Azure Blob Storage C2 profile for Mythic with **per-agent container isolation**.
 │                           RUNTIME                                   │
 ├─────────────────────────────────────────────────────────────────────┤
 │  AGENT (container-scoped SAS only)                                 │
-│    ├─► Write: /{container}/checkin.blob                            │
-│    ├─► Read:  /{container}/tasking/pending.blob                    │
-│    └─► Write: /{container}/response/{task_id}.blob                 │
+│    ├─► Write: /{container}/ats/{message-id}.blob                   │
+│    └─► Read:  /{container}/sta/{message-id}.blob                   │
 │                                                                     │
 │  C2 SERVER (has account key)                                       │
 │    ├─► ListContainers (prefix: agent-)                             │
-│    └─► For each container: read/write/delete blobs                 │
+│    ├─► For each: read ats/*, forward to Mythic                     │
+│    └─► Write Mythic responses to sta/* with matching message-id    │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -102,32 +102,50 @@ Each agent container uses this structure:
 
 ```
 agent-{uuid[:12]}/
-├── checkin.blob              # Initial checkin (agent writes)
-├── tasking/
-│   └── pending.blob          # Current tasking (server writes, agent reads)
-└── response/
-    └── {task_id}.blob        # Task responses (agent writes, server deletes)
+├── ats/
+│   └── {message-id}.blob     # Agent-to-Server messages
+└── sta/
+    └── {message-id}.blob     # Server-to-Agent responses
 ```
+
+**Message Format:** All messages are base64-encoded with format: `{36-char-uuid}{json-payload}`
+
+**Message IDs:** Generated per-request for request/response correlation
 
 ## Agent Communication
 
-### Initial Checkin
-```
-PUT /{container}/checkin.blob?{sas_token}
-x-ms-blob-type: BlockBlob
-Body: <encrypted checkin message>
+### Message Flow
+
+All agent messages follow the same pattern:
+
+1. **Agent sends request:**
+   ```
+   PUT /{container}/ats/{message-id}.blob?{sas_token}
+   x-ms-blob-type: BlockBlob
+   Body: base64({uuid} + json({"action": "...", ...}))
+   ```
+
+2. **Agent polls for response:**
+   ```
+   GET /{container}/sta/{message-id}.blob?{sas_token}
+   ```
+   Polls until blob exists, then reads and deletes it.
+
+### Message Types
+
+**Checkin:**
+```json
+{"action": "checkin", "uuid": "...", "ips": [...], "os": "...", ...}
 ```
 
-### Get Tasking
-```
-GET /{container}/tasking/pending.blob?{sas_token}
+**Get Tasking:**
+```json
+{"action": "get_tasking", "tasking_size": 1}
 ```
 
-### Post Response
-```
-PUT /{container}/response/{task_id}.blob?{sas_token}
-x-ms-blob-type: BlockBlob
-Body: <encrypted response>
+**Post Response:**
+```json
+{"action": "post_response", "responses": [{...}]}
 ```
 
 ## Comparison with LokiC2

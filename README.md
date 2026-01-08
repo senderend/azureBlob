@@ -41,10 +41,11 @@ RUNTIME:
 
 ```
 agent-{uuid[:12]}/
-├── checkin.blob              # Initial checkin
-├── tasking/pending.blob      # Current tasking from server
-└── response/{task_id}.blob   # Agent responses
+├── ats/{message-id}.blob     # Agent-to-Server messages (checkin, get_tasking, post_response)
+└── sta/{message-id}.blob     # Server-to-Agent responses (tasking, acknowledgments)
 ```
+
+Messages use UUID-based naming for request/response correlation. Each message is prefixed with the agent's UUID followed by JSON payload.
 
 ## Compatible Agents
 
