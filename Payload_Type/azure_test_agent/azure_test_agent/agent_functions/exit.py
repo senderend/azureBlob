@@ -17,7 +17,7 @@ class ExitCommand(CommandBase):
     help_cmd = "exit"
     description = "Terminate the agent"
     version = 1
-    author = "@your_handle"
+    author = "@sender, @KingoftheNOPs, @its-a-feature, @auntra-entra, @n0mad"
     argument_class = ExitArguments
     attackmapping = ["T1489"]
     supported_ui_features = ["callback_table:exit"]

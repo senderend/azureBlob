@@ -13,7 +13,7 @@ from azure.storage.blob import BlobServiceClient, generate_container_sas, Contai
 
 class AzureTestAgent(PayloadType):
     name = "azure_test_agent"
-    author = "@your_handle"
+    author = "@sender, @KingoftheNOPs, @its-a-feature, @auntra-entra, @n0mad"
     description = "Minimal Python agent for testing Azure Blob C2 profile"
     supported_os = [SupportedOS.Linux, SupportedOS.MacOS, SupportedOS.Windows]
     file_extension = "py"

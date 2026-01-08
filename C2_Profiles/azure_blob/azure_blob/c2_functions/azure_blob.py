@@ -70,7 +70,7 @@ async def generate_config(input: C2OtherServiceRPCMessage) -> C2OtherServiceRPCM
 class AzureBlob(C2Profile):
     name = "azure_blob"
     description = "Azure Blob Storage C2 with per-agent container isolation"
-    author = "@your_handle"
+    author = "@sender, @KingoftheNOPs, @its-a-feature, @auntra-entra, @n0mad"
     is_p2p = False
     is_server_routed = False
     server_folder_path = Path(".") / "azure_blob" / "c2_code"

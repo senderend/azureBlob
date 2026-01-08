@@ -17,7 +17,7 @@ class PwdCommand(CommandBase):
     help_cmd = "pwd"
     description = "Print current working directory"
     version = 1
-    author = "@your_handle"
+    author = "@sender, @KingoftheNOPs, @its-a-feature, @auntra-entra, @n0mad"
     argument_class = PwdArguments
     attackmapping = ["T1083"]
 

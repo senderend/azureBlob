@@ -27,7 +27,7 @@ class ShellCommand(CommandBase):
     help_cmd = "shell <command>"
     description = "Execute a shell command"
     version = 1
-    author = "@your_handle"
+    author = "@sender, @KingoftheNOPs, @its-a-feature, @auntra-entra, @n0mad"
     argument_class = ShellArguments
     attackmapping = ["T1059"]
 

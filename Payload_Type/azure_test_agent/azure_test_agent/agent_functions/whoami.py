@@ -17,7 +17,7 @@ class WhoamiCommand(CommandBase):
     help_cmd = "whoami"
     description = "Get current user and hostname"
     version = 1
-    author = "@your_handle"
+    author = "@sender, @KingoftheNOPs, @its-a-feature, @auntra-entra, @n0mad"
     argument_class = WhoamiArguments
     attackmapping = ["T1033"]
 

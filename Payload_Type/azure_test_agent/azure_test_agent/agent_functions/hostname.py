@@ -17,7 +17,7 @@ class HostnameCommand(CommandBase):
     help_cmd = "hostname"
     description = "Get system hostname"
     version = 1
-    author = "@your_handle"
+    author = "@sender, @KingoftheNOPs, @its-a-feature, @auntra-entra, @n0mad"
     argument_class = HostnameArguments
     attackmapping = ["T1082"]
 
