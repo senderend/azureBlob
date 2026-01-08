@@ -1346,7 +1346,7 @@ class medusa:
             "Server": "callback_host",
             "Port": "callback_port",
             "PostURI": "/post_uri",
-            "PayloadUUID": "e86a3a65-8f6b-44ed-835a-bb63ea3e8029",
+            "PayloadUUID": "4f6e4343-8619-4f8b-b49f-de7ecdbab89a",
             "UUID": "",
             "Headers": {},
             "Sleep": 1,
