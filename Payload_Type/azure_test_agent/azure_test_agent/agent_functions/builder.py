@@ -67,10 +67,21 @@ class AzureTestAgent(PayloadType):
                     params = c2.get_parameters_dict()
 
                     storage_account = params.get("storage_account", "")
-                    account_key = params.get("account_key", "")
-                    callback_interval = params.get("callback_interval", "30")
-                    callback_jitter = params.get("callback_jitter", "10")
-                    aes_key = params.get("AESPSK", "")
+                    account_key_param = params.get("account_key", "")
+                    # crypto_type params return dict with enc_key/dec_key
+                    if isinstance(account_key_param, dict):
+                        account_key = account_key_param.get("enc_key", "") or account_key_param.get("value", "")
+                    else:
+                        account_key = str(account_key_param) if account_key_param else ""
+
+                    callback_interval = str(params.get("callback_interval", "30"))
+                    callback_jitter = str(params.get("callback_jitter", "10"))
+
+                    aes_key_param = params.get("AESPSK", "")
+                    if isinstance(aes_key_param, dict):
+                        aes_key = aes_key_param.get("enc_key", "")
+                    else:
+                        aes_key = str(aes_key_param) if aes_key_param else ""
 
                     if not storage_account or not account_key:
                         resp.status = BuildStatus.Error

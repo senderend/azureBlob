@@ -7,6 +7,7 @@ Uses account key to access all agent containers (agent-* prefix).
 """
 
 import asyncio
+import base64
 import json
 import os
 import sys
@@ -21,7 +22,7 @@ class AzureBlobServer:
     def __init__(self):
         self.storage_account = ""
         self.account_key = ""
-        self.mythic_address = os.environ.get("MYTHIC_ADDRESS", "http://mythic_server:17443")
+        self.mythic_address = os.environ.get("MYTHIC_ADDRESS", "http://127.0.0.1:17443/agent_message")
         self.poll_interval = 5
         self.blob_service = None
         self.known_containers = set()
@@ -58,10 +59,9 @@ class AzureBlobServer:
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.post(
-                    f"{self.mythic_address}/agent_message",
+                    f"{self.mythic_address}",
                     data=message,
                     headers={
-                        "Content-Type": "application/octet-stream",
                         "Mythic": "azure_blob",
                     },
                     ssl=False,
@@ -71,55 +71,28 @@ class AzureBlobServer:
                 print(f"[-] Error forwarding to Mythic: {e}")
                 return b""
 
-    async def process_checkin(self, container_name: str):
-        """Process initial agent checkin"""
-        container_client = self.blob_service.get_container_client(container_name)
-
-        try:
-            blob_client = container_client.get_blob_client("checkin.blob")
-            data = blob_client.download_blob().readall()
-
-            # Forward to Mythic
-            response = await self.forward_to_mythic(data)
-
-            if response:
-                # Write response as initial tasking
-                tasking_blob = container_client.get_blob_client("tasking/pending.blob")
-                tasking_blob.upload_blob(response, overwrite=True)
-
-                # Delete checkin blob (processed)
-                blob_client.delete_blob()
-
-                print(f"[+] Processed checkin from {container_name}")
-
-        except ResourceNotFoundError:
-            pass  # No checkin blob, that's fine
-        except Exception as e:
-            print(f"[-] Error processing checkin for {container_name}: {e}")
-
-    async def process_responses(self, container_name: str):
-        """Process agent responses"""
+    async def process_messages(self, container_name: str):
+        """Process messages"""
         container_client = self.blob_service.get_container_client(container_name)
 
         try:
             # List response blobs
-            blobs = list(container_client.list_blobs(name_starts_with="response/"))
+            blobs = list(container_client.list_blobs(name_starts_with="ats/"))
 
             for blob in blobs:
                 try:
                     blob_client = container_client.get_blob_client(blob.name)
                     data = blob_client.download_blob().readall()
-
+                    # Delete processed message
+                    blob_client.delete_blob()
                     # Forward to Mythic
+                    print(f"[*] mythic message: {base64.b64decode(data).decode()}")
                     response = await self.forward_to_mythic(data)
-
+                    print(f"[*] mythic response: {base64.b64decode(response).decode()}")
                     if response:
                         # Update tasking
-                        tasking_blob = container_client.get_blob_client("tasking/pending.blob")
+                        tasking_blob = container_client.get_blob_client("sta/message.blob")
                         tasking_blob.upload_blob(response, overwrite=True)
-
-                    # Delete processed response
-                    blob_client.delete_blob()
 
                     print(f"[+] Processed response from {container_name}: {blob.name}")
 
@@ -148,12 +121,8 @@ class AzureBlobServer:
                     if container_name not in self.known_containers:
                         print(f"[+] Discovered new agent container: {container_name}")
                         self.known_containers.add(container_name)
-
-                    # Process checkins
-                    await self.process_checkin(container_name)
-
                     # Process responses
-                    await self.process_responses(container_name)
+                    await self.process_messages(container_name)
 
             except Exception as e:
                 print(f"[-] Polling error: {e}")
