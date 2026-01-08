@@ -20,6 +20,7 @@ class ExitCommand(CommandBase):
     author = "@your_handle"
     argument_class = ExitArguments
     attackmapping = ["T1489"]
+    supported_ui_features = ["callback_table:exit"]
 
     async def create_go_tasking(self, taskData: MythicCommandBase.PTTaskMessageAllData) -> MythicCommandBase.PTTaskCreateTaskingMessageResponse:
         response = MythicCommandBase.PTTaskCreateTaskingMessageResponse(
