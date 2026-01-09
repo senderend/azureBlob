@@ -71,7 +71,7 @@ class AzureTestAgent(PayloadType):
                     params = c2.get_parameters_dict()
                     killdate = params.get("killdate", None)
 
-                    callback_interval = str(params.get("callback_interval", "30"))
+                    callback_interval = str(params.get("callback_interval", "5"))
                     callback_jitter = str(params.get("callback_jitter", "10"))
 
                     config_data = await SendMythicRPCOtherServiceRPC(MythicRPCOtherServiceRPCMessage(

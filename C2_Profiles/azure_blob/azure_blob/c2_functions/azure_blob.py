@@ -96,7 +96,7 @@ class AzureBlob(C2Profile):
         C2ProfileParameter(
             name="callback_interval",
             description="Agent callback interval in seconds",
-            default_value="30",
+            default_value="5",
             verifier_regex="^[0-9]+$",
             required=True,
         ),
