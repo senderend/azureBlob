@@ -4,9 +4,14 @@ from azure.storage.blob import BlobServiceClient, generate_container_sas, Contai
 from datetime import datetime
 
 async def generate_config(input: C2OtherServiceRPCMessage) -> C2OtherServiceRPCMessageResponse:
-    # Generate unique container name
-    storage_account = input.ServiceRPCFunctionArguments.get("storage_account", None)
-    account_key = input.ServiceRPCFunctionArguments.get("account_key", None)
+    # prev pulling from payload build parameters
+    # storage_account = input.ServiceRPCFunctionArguments.get("storage_account", None)
+    # account_key = input.ServiceRPCFunctionArguments.get("account_key", None)
+    ## now we pull from server config.json
+    with open(Path(__file__).parent.parent / "c2_code" / "config.json") as f:
+        config = json.load(f)
+        storage_account = config.get("storage_account", "")
+        account_key = config.get("account_key", "")
     payload_uuid = input.ServiceRPCFunctionArguments.get("payload_uuid", None)
     killdate = input.ServiceRPCFunctionArguments.get("killdate", None)
     if storage_account == None or account_key == None or payload_uuid == None or killdate == None:
@@ -76,18 +81,18 @@ class AzureBlob(C2Profile):
     server_folder_path = Path(".") / "azure_blob" / "c2_code"
     server_binary_path = server_folder_path / "server.py"
     parameters = [
-        C2ProfileParameter(
-            name="storage_account",
-            description="Azure Storage Account name (e.g., mystorageaccount)",
-            default_value="",
-            required=True,
-        ),
-        C2ProfileParameter(
-            name="account_key",
-            description="Storage Account Key (server-side only - NEVER sent to agent)",
-            default_value="",
-            required=True,
-        ),
+        # C2ProfileParameter(
+        #     name="storage_account",
+        #     description="Azure Storage Account name (e.g., mystorageaccount)",
+        #     default_value="",
+        #     required=True,
+        # ),
+        # C2ProfileParameter(
+        #     name="account_key",
+        #     description="Storage Account Key (server-side only - NEVER sent to agent)",
+        #     default_value="",
+        #     required=True,
+        # ),
         C2ProfileParameter(
             name="callback_interval",
             description="Agent callback interval in seconds",

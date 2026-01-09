@@ -93,8 +93,8 @@ class AzureTestAgent(PayloadType):
                         ServiceRPCFunction="generate_config",
                         ServiceRPCFunctionArguments={
                             "killdate": killdate,
-                            "storage_account": storage_account,
-                            "account_key": account_key,
+                            # "storage_account": storage_account,
+                            # "account_key": account_key,
                             "payload_uuid": self.uuid
                         }
                     ))
