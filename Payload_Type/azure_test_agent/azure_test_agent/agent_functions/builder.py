@@ -26,7 +26,11 @@ class AzureTestAgent(PayloadType):
     agent_path = Path(".") / "azure_test_agent" / "agent_code"
     agent_code_path = Path(".") / "azure_test_agent" / "agent_code"
     agent_icon_path = Path(".") / "azure_test_agent" / "pegasus.svg"
-
+    c2_parameter_deviations = {
+        "azure_blob": {
+            "AESPSK": C2ParameterDeviation(supported=False),
+        }
+    }
     c2_profiles = ["azure_blob"]
 
     build_parameters = [
@@ -66,35 +70,15 @@ class AzureTestAgent(PayloadType):
                 if profile_name == "azure_blob":
                     params = c2.get_parameters_dict()
                     killdate = params.get("killdate", None)
-                    storage_account = params.get("storage_account", "")
-                    account_key_param = params.get("account_key", "")
-                    # crypto_type params return dict with enc_key/dec_key
-                    if isinstance(account_key_param, dict):
-                        account_key = account_key_param.get("enc_key", "") or account_key_param.get("value", "")
-                    else:
-                        account_key = str(account_key_param) if account_key_param else ""
 
                     callback_interval = str(params.get("callback_interval", "30"))
                     callback_jitter = str(params.get("callback_jitter", "10"))
-
-                    aes_key_param = params.get("AESPSK", "")
-                    if isinstance(aes_key_param, dict):
-                        aes_key = aes_key_param.get("enc_key", "")
-                    else:
-                        aes_key = str(aes_key_param) if aes_key_param else ""
-
-                    if not storage_account or not account_key:
-                        resp.status = BuildStatus.Error
-                        resp.build_stderr = "Missing storage_account or account_key"
-                        return resp
 
                     config_data = await SendMythicRPCOtherServiceRPC(MythicRPCOtherServiceRPCMessage(
                         ServiceName="azure_blob",
                         ServiceRPCFunction="generate_config",
                         ServiceRPCFunctionArguments={
                             "killdate": killdate,
-                            # "storage_account": storage_account,
-                            # "account_key": account_key,
                             "payload_uuid": self.uuid
                         }
                     ))
@@ -129,10 +113,7 @@ class AzureTestAgent(PayloadType):
                     agent_code = agent_code.replace("CALLBACK_JITTER_PLACEHOLDER", callback_jitter)
                     agent_code = agent_code.replace("AGENT_UUID_PLACEHOLDER", self.uuid)
 
-                    if aes_key and aes_key != "none":
-                        agent_code = agent_code.replace("AES_KEY_PLACEHOLDER", aes_key)
-                    else:
-                        agent_code = agent_code.replace("AES_KEY_PLACEHOLDER", "")
+                    agent_code = agent_code.replace("AES_KEY_PLACEHOLDER", "")
 
             # Step 3: Finalize payload
             await SendMythicRPCPayloadUpdatebuildStep(

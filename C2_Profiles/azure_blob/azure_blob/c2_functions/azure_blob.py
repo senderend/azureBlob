@@ -134,19 +134,3 @@ class AzureBlob(C2Profile):
     custom_rpc_functions = {
         "generate_config": generate_config
     }
-
-    async def opsec(self, inputMsg: C2OPSECMessage) -> C2OPSECMessageResponse:
-        """Validate configuration - CANNOT modify parameters"""
-        response = C2OPSECMessageResponse(Success=True)
-
-        params = inputMsg.Parameters
-        if not params.get("storage_account"):
-            response.Success = False
-            response.Error = "Storage account name is required"
-        elif not params.get("account_key"):
-            response.Success = False
-            response.Error = "Account key is required"
-        else:
-            response.Message = "Azure Blob Storage configuration validated"
-
-        return response
