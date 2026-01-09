@@ -94,6 +94,7 @@ class AzureBlobAgent:
                 return resp.read()
         except urllib.error.HTTPError as e:
             if e.code == 404:
+                print(f"[!] 404 not found for blob: {blob_path}")
                 return b""  # Blob not found
             print(f"[!] GET blob error: {e}")
             return b""
