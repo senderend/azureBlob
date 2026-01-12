@@ -82,20 +82,24 @@ class AzureBlobServer:
             for blob in blobs:
                 try:
                     blob_client = container_client.get_blob_client(blob.name)
-                    print(f"[*] blob name: {blob.name}")
+                    print(f"[*] blob name: {blob_client.url}")
+                    print(f"[*] blob name: {container_name}/{blob.name}")
                     data = blob_client.download_blob().readall()
                     # Delete processed response
                     blob_client.delete_blob()
                     # Forward to Mythic
-                    print(f"[*] mythic message: {base64.b64decode(data).decode()}")
+                    print(f"[*] data: {data}")
+                    #print(f"[*] mythic message: {base64.b64decode(data).decode()}")
                     response = await self.forward_to_mythic(data)
-                    print(f"[*] mythic response: {base64.b64decode(response).decode()}")
+                    #print(f"[*] mythic response: {base64.b64decode(response).decode()}")
                     if response:
                         # Update tasking
                         response_name = f"{blob.name.replace('ats', 'sta')}"
                         print(f"[*] writing response to: {response_name}")
                         tasking_blob = container_client.get_blob_client(response_name)
                         tasking_blob.upload_blob(response, overwrite=True)
+                        # Delete processed response
+                        #blob_client.delete_blob()
 
                     print(f"[+] Processed response from {container_name}: {blob.name}")
 
