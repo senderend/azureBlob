@@ -4,3 +4,4 @@ main
 .idea/
 .venv/
 .claude/
+Payload_Type/azure_test_agent/azure_test_agent/agent_code/medusa_test.py
