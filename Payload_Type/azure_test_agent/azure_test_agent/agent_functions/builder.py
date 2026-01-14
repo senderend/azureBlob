@@ -28,7 +28,8 @@ class AzureTestAgent(PayloadType):
     agent_icon_path = Path(".") / "azure_test_agent" / "pegasus.svg"
     c2_parameter_deviations = {
         "azure_blob": {
-            "AESPSK": C2ParameterDeviation(choices=["none"], default_value="none", supported=True),
+            "AESPSK": C2ParameterDeviation(supported=False),
+            "encrypted_exchange_check": C2ParameterDeviation(supported=False),
         }
     }
     c2_profiles = ["azure_blob"]
