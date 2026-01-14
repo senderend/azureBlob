@@ -127,7 +127,7 @@ class AzureBlob(C2Profile):
             name="killdate",
             description="Kill Date",
             parameter_type=ParameterType.Date,
-            default_value=365,
+            default_value=28,
             required=False,
         ),
     ]
