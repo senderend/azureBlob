@@ -30,7 +30,7 @@ class AzureTestAgent(PayloadType):
         "azure_blob": {
             "AESPSK": C2ParameterDeviation(supported=False),
             "encrypted_exchange_check": C2ParameterDeviation(supported=False),
-            "killdate": C2ParameterDeviation(default_value=7),
+            "killdate": C2ParameterDeviation(default_value=7, supported=True),
         }
     }
     c2_profiles = ["azure_blob"]
