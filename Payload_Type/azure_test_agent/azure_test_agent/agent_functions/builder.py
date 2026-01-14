@@ -88,11 +88,18 @@ class AzureTestAgent(PayloadType):
                         resp.status = BuildStatus.Error
                         resp.build_stderr = f"Build failed: {config_data.Error}"
                         return resp
+                    container_url = f"{config_data.Result['blob_endpoint']}/{config_data.Result['container_name']}"
+                    sas_preview = config_data.Result['sas_token'][:30] + "..." if len(config_data.Result['sas_token']) > 30 else config_data.Result['sas_token']
+
                     await SendMythicRPCPayloadUpdatebuildStep(
                         MythicRPCPayloadUpdateBuildStepMessage(
                             PayloadUUID=self.uuid,
                             StepName="Provisioning Azure Container",
-                            StepStdout=f"Container provisioned with scoped SAS token\nEndpoint: {config_data.Result['blob_endpoint']}",
+                            StepStdout=f"Container: {config_data.Result['container_name']}\n"
+                                      f"URL: {container_url}\n"
+                                      f"SAS Expiration: {killdate or 'Not set'}\n"
+                                      f"Permissions: read, write, list, add, create, delete\n"
+                                      f"SAS Token: {sas_preview}",
                             StepSuccess=True
                         )
                     )
@@ -102,7 +109,10 @@ class AzureTestAgent(PayloadType):
                         MythicRPCPayloadUpdateBuildStepMessage(
                             PayloadUUID=self.uuid,
                             StepName="Stamping Configuration",
-                            StepStdout="Embedding Azure configuration into agent",
+                            StepStdout=f"Endpoint: {config_data.Result['blob_endpoint']}\n"
+                                      f"Container: {config_data.Result['container_name']}\n"
+                                      f"Callback Interval: {callback_interval}s\n"
+                                      f"Callback Jitter: {callback_jitter}%\n",
                             StepSuccess=True
                         )
                     )
