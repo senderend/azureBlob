@@ -1,5 +1,5 @@
 {
-    "storage_account": ">STORAGE_ACCOUNT",
-    "account_key": ">[REDACTED_ACCOUNT_KEY]==",
-    "poll_interval": 0
+    "storage_account": "",
+    "account_key": "",
+    "poll_interval": 5
 }
