@@ -1,4 +1,4 @@
 import mythic_container
-from azure_test_agent.agent_functions.builder import AzureTestAgent
+from pegasus.agent_functions.builder import Pegasus
 
 mythic_container.mythic_service.start_and_run_forever()
