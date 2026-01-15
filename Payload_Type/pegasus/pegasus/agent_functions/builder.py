@@ -11,10 +11,10 @@ from pathlib import Path
 from azure.storage.blob import BlobServiceClient, generate_container_sas, ContainerSasPermissions
 
 
-class AzureTestAgent(PayloadType):
-    name = "azure_test_agent"
+class Pegasus(PayloadType):
+    name = "pegasus"
     author = "@sender, @KingoftheNOPs, @its-a-feature, @auntra-entra, @n0mad"
-    description = "Minimal Python agent for testing Azure Blob C2 profile"
+    description = "Pegasus - Test agent for Azure Blob C2 profile"
     supported_os = [SupportedOS.Linux, SupportedOS.MacOS, SupportedOS.Windows]
     file_extension = "py"
     wrapper = False
@@ -23,9 +23,9 @@ class AzureTestAgent(PayloadType):
     mythic_encrypts = True
     translation_container = None
     agent_type = "agent"
-    agent_path = Path(".") / "azure_test_agent" / "agent_code"
-    agent_code_path = Path(".") / "azure_test_agent" / "agent_code"
-    agent_icon_path = Path(".") / "azure_test_agent" / "pegasus.svg"
+    agent_path = Path(".") / "pegasus" / "agent_code"
+    agent_code_path = Path(".") / "pegasus" / "agent_code"
+    agent_icon_path = Path(".") / "pegasus" / "pegasus.svg"
     c2_parameter_deviations = {
         "azure_blob": {
             "AESPSK": C2ParameterDeviation(supported=False),

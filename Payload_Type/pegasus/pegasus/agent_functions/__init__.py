@@ -1,4 +1,4 @@
-from .builder import AzureTestAgent
+from .builder import Pegasus
 from .shell import ShellCommand
 from .whoami import WhoamiCommand
 from .pwd import PwdCommand
