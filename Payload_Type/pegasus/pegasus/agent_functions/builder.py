@@ -30,7 +30,6 @@ class Pegasus(PayloadType):
         "azure_blob": {
             "AESPSK": C2ParameterDeviation(supported=False),
             "encrypted_exchange_check": C2ParameterDeviation(supported=False),
-            "killdate": C2ParameterDeviation(default_value=7, supported=True),
         }
     }
     c2_profiles = ["azure_blob"]
@@ -125,7 +124,6 @@ class Pegasus(PayloadType):
                     agent_code = agent_code.replace("CALLBACK_JITTER_PLACEHOLDER", callback_jitter)
                     agent_code = agent_code.replace("AGENT_UUID_PLACEHOLDER", self.uuid)
 
-                    agent_code = agent_code.replace("AES_KEY_PLACEHOLDER", "")
 
             # Step 3: Finalize payload
             await SendMythicRPCPayloadUpdatebuildStep(
