@@ -1,4 +1,13 @@
-# Azure Blob C2 - Mythic Integration & Testing Guide
+# Azure Blob C2 - Testing Guide with Pegasus
+
+## Overview
+
+This guide walks through testing the Azure Blob C2 profile using **Pegasus**, a minimal test agent included in this repository.
+
+**Pegasus Purpose:**
+- Test the Azure Blob C2 profile configuration
+- Serve as a reference implementation for integrating Azure Blob C2 into your own agents
+- Demonstrate container isolation and SAS token security model
 
 ## Prerequisites
 
@@ -8,7 +17,26 @@
 
 ## Step 1: Set Up Azure Storage Account
 
-### Option A: Azure CLI
+### Azure Portal Method (Recommended)
+
+1. Go to **https://portal.azure.com** and sign in
+2. Click **Create a resource** → **Storage account**
+3. Fill in the basics:
+   - **Resource group**: Create new or use existing
+   - **Storage account name**: Choose a globally unique name (e.g., `mythicc2storage123`)
+   - **Region**: Choose one close to your Mythic server
+   - **Performance**: Standard
+   - **Redundancy**: Locally-redundant storage (LRS)
+4. Click **Review + create** → **Create**
+5. Once deployed, go to your storage account
+6. In the left menu, under **Security + networking**, click **Access keys**
+7. Copy and save these values (keep them secure!):
+   - **Storage account name** (e.g., `mythicc2storage123`)
+   - **key1** (or key2) - the long access key string
+
+### Alternative: Azure CLI
+
+For automation or if you prefer CLI:
 
 ```bash
 # Login to Azure
@@ -38,18 +66,27 @@ ACCOUNT_KEY=$(az storage account keys list \
 echo "Account Key: $ACCOUNT_KEY"
 ```
 
-### Option B: Azure Portal
-
-1. Go to https://portal.azure.com
-2. Create a new **Storage Account**
-3. Go to **Access Keys** under Security + networking
-4. Copy the **Storage account name** and **key1**
-
 ---
 
 ## Step 2: Install Components into Mythic
 
-### Install from Local Directory
+### Install from GitHub (Recommended)
+
+```bash
+# Navigate to your Mythic installation
+cd /path/to/Mythic
+
+# Install both C2 profile and Pegasus PayloadType
+sudo ./mythic-cli install github https://github.com/senderend/azureBlob
+```
+
+This installs:
+- Azure Blob C2 profile
+- Pegasus test agent PayloadType
+
+### Alternative: Install from Local Directory
+
+If you've cloned the repository locally:
 
 ```bash
 # Navigate to your Mythic installation
@@ -59,48 +96,48 @@ cd /path/to/Mythic
 sudo ./mythic-cli install folder /path/to/azureBlob/C2_Profiles/azure_blob
 
 # Install PayloadType
-sudo ./mythic-cli install folder /path/to/azureBlob/Payload_Type/azure_test_agent
-```
-
-### Install from GitHub (after pushing)
-
-```bash
-cd /path/to/Mythic
-
-# Install both components
-sudo ./mythic-cli install github https://github.com/YOUR_USERNAME/azureBlob
+sudo ./mythic-cli install folder /path/to/azureBlob/Payload_Type/pegasus
 ```
 
 ---
 
-## Step 3: Configure and Start C2 Profile
+## Step 3: Configure C2 Profile in Mythic Web UI
 
-### Start the C2 Profile Container
+### 1. Add Azure Credentials (One-Time Setup)
+
+First, configure your Azure credentials in the C2 profile's config file:
 
 ```bash
-# Start the azure_blob C2 profile
-sudo ./mythic-cli c2 start azure_blob
-
-# Verify it's running
-sudo ./mythic-cli c2 status
-
-# Check logs
-sudo ./mythic-cli logs azure_blob
+cd /path/to/Mythic/C2_Profiles/azure_blob/c2_code
+nano config.json
 ```
 
-### Configure C2 Profile in Mythic UI
+Add your Azure storage account credentials:
+```json
+{
+  "storage_account": "YOUR_STORAGE_ACCOUNT",
+  "account_key": "YOUR_ACCOUNT_KEY",
+  "poll_interval": 5
+}
+```
 
-1. Go to Mythic web UI (https://localhost:7443)
+Save and start the C2 profile:
+```bash
+sudo ./mythic-cli c2 start azure_blob
+```
+
+### 2. Configure C2 Profile Instance in Web UI
+
+1. Open Mythic web UI at `https://localhost:7443`
 2. Navigate to **C2 Profiles**
-3. Click **azure_blob**
-4. Click **Configure** (or create new instance)
-5. Fill in:
-   - **storage_account**: Your Azure storage account name
-   - **account_key**: Your Azure storage account key
-   - **callback_interval**: 30 (seconds)
-   - **callback_jitter**: 10 (percent)
-6. Click **Save**
-7. Click **Start** to start the C2 profile server
+3. Find **azure_blob** and click on it
+4. Click **+ Create New Profile Instance** (or edit existing)
+5. Configure the parameters:
+   - **Callback Interval**: `5` (seconds between agent check-ins)
+   - **Callback Jitter**: `10` (percent variation in timing)
+   - **Kill Date**: Select date 28 days out (SAS token expiration)
+6. Click **Submit**
+7. Click the **Start** button to start the C2 server
 
 ---
 
@@ -108,33 +145,46 @@ sudo ./mythic-cli logs azure_blob
 
 ```bash
 # Start the payload type container
-sudo ./mythic-cli payload start azure_test_agent
+sudo ./mythic-cli payload start pegasus
 
 # Verify it's running
 sudo ./mythic-cli payload status
 
 # Check logs
-sudo ./mythic-cli logs azure_test_agent
+sudo ./mythic-cli logs pegasus
 ```
 
 ---
 
 ## Step 5: Create a Payload
 
-### Via Mythic UI
+### Web UI Method (Recommended)
 
-1. Go to **Payloads** > **Create Payload**
-2. Select OS: **Linux** (or your target)
-3. Select Payload Type: **azure_test_agent**
-4. Select C2 Profile: **azure_blob**
-5. Configure C2 parameters (should auto-fill from profile):
-   - Verify storage_account is set
-   - Verify account_key is set
-6. Click **Create Payload**
-7. Wait for build to complete
-8. Download the payload
+1. In Mythic web UI, go to **Payloads** → **Create Payload**
 
-### Via API (curl)
+2. **Select Operating System**: Choose your target (Linux, macOS, or Windows)
+
+3. **Select Payload Type**: Choose **pegasus**
+
+4. **Select C2 Profile**: Choose your **azure_blob** profile instance (from Step 3)
+
+5. **Build Parameters**:
+   - **Output Type**: `py` (Python script) or `exe` (compiled executable)
+
+6. Click **Build Payload**
+
+7. **Watch the build steps**:
+   - ✓ Provisioning Azure Container (creates unique container, generates SAS token)
+   - ✓ Stamping Configuration (embeds endpoint, interval, jitter)
+   - ✓ Finalizing Payload
+
+8. **Download** the generated payload
+
+**Note:** The C2 profile parameters (callback_interval, callback_jitter, killdate) are inherited from your C2 profile instance.
+
+### Alternative: API Method
+
+For automation or scripting, you can create payloads via API:
 
 ```bash
 # Get your API token from Mythic UI > Settings
@@ -143,14 +193,13 @@ curl -X POST https://localhost:7443/api/v1.4/payloads/create \
   -H "Authorization: Bearer YOUR_API_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "payload_type": "azure_test_agent",
+    "payload_type": "pegasus",
     "c2_profiles": [{
       "c2_profile": "azure_blob",
       "c2_profile_parameters": {
-        "storage_account": "YOUR_STORAGE_ACCOUNT",
-        "account_key": "YOUR_ACCOUNT_KEY",
-        "callback_interval": "30",
-        "callback_jitter": "10"
+        "callback_interval": "5",
+        "callback_jitter": "10",
+        "killdate": "2026-01-20"
       }
     }],
     "selected_os": "linux",
@@ -204,18 +253,25 @@ python3 agent.py
 
 ---
 
-## Step 7: Interact with Agent
+## Step 7: Interact with Agent in Web UI
 
-1. Go to Mythic UI > **Active Callbacks**
-2. You should see your agent listed
-3. Click on the agent to open the interaction console
-4. Try commands:
+1. In Mythic web UI, go to **Active Callbacks**
+2. You should see your Pegasus agent listed with:
+   - Hostname
+   - User
+   - IP address
+   - Operating system
+3. Click on the callback to open the **Interact** tab
+4. Try the built-in commands:
    ```
-   shell whoami
-   shell hostname
-   shell pwd
-   shell ls -la
+   whoami       # Show current user and hostname
+   pwd          # Show current directory
+   hostname     # Show hostname
+   shell ls -la # Execute shell command
+   exit         # Terminate the agent
    ```
+
+The agent will poll every 5 seconds (±10% jitter) for new tasks and execute them.
 
 ---
 
@@ -223,26 +279,39 @@ python3 agent.py
 
 ### C2 Profile Won't Start
 
+**Via Web UI:**
+1. Go to **C2 Profiles** → **azure_blob**
+2. Check the **Status** indicator
+3. View logs in the **Logs** tab
+
+**Via CLI:**
 ```bash
 # Check logs
 sudo ./mythic-cli logs azure_blob
-
-# Common issues:
-# - Missing storage_account or account_key in config
-# - Azure credentials invalid
 ```
+
+**Common issues:**
+- Missing storage_account or account_key in config.json
+- Azure credentials invalid
+- config.json not properly formatted (check JSON syntax)
 
 ### Payload Build Fails
 
+**Via Web UI:**
+1. Go to **Payloads** → **Created Payloads**
+2. Find your failed payload build
+3. Click to view build logs and error messages
+
+**Via CLI:**
 ```bash
 # Check payload type logs
-sudo ./mythic-cli logs azure_test_agent
-
-# Common issues:
-# - Can't connect to Azure (network/firewall)
-# - Invalid storage account credentials
-# - Container creation failed
+sudo ./mythic-cli logs pegasus
 ```
+
+**Common issues:**
+- Can't connect to Azure (network/firewall blocking outbound HTTPS)
+- Invalid storage account credentials in config.json
+- Container creation failed (check Azure permissions)
 
 ### Agent Doesn't Check In
 
@@ -275,20 +344,22 @@ sudo ./mythic-cli logs azure_test_agent
 
 ### Agent Checks In But No Tasking
 
-1. Check Mythic server received the checkin (UI shows callback)
-2. Check C2 profile logs for forwarding errors
-3. Verify Mythic address is correct in C2 config
+1. **Check callback in Web UI**: Go to **Active Callbacks** - agent should be listed
+2. **View C2 logs**: **C2 Profiles** → **azure_blob** → **Logs** tab - look for forwarding errors
+3. **Check agent logs**: Agent should show polling messages like `[*] checking for sta/{message-id}.blob`
+4. **Issue a command**: Try `whoami` command - if it times out, check C2 server connectivity
 
 ---
 
 ## Verification Checklist
 
 - [ ] Azure Storage Account created
+- [ ] config.json configured with storage_account and account_key
 - [ ] C2 Profile installed and running
-- [ ] PayloadType installed and running
-- [ ] Payload builds successfully
-- [ ] Container created in Azure (check Azure Portal)
-- [ ] Agent runs and writes checkin.blob
+- [ ] PayloadType (Pegasus) installed and running
+- [ ] Payload builds successfully with Azure container provisioning
+- [ ] Container created in Azure (check Azure Portal or logs)
+- [ ] Agent runs and writes ats/{message-id}.blob
 - [ ] Callback appears in Mythic UI
 - [ ] Commands execute and return output
 - [ ] SAS token is container-scoped (agent can't see other containers)
@@ -343,5 +414,5 @@ az group delete --name mythic-c2-rg --yes --no-wait
 
 ```bash
 sudo ./mythic-cli c2 stop azure_blob
-sudo ./mythic-cli payload stop azure_test_agent
+sudo ./mythic-cli payload stop pegasus
 ```

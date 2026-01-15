@@ -41,60 +41,55 @@ Azure Blob Storage C2 profile for Mythic with **per-agent container isolation**.
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-## Setup
+## Quick Start
 
-### 1. Create Azure Storage Account
+### 1. Create Azure Storage Account (Azure Portal)
 
-1. Go to Azure Portal → Storage Accounts → Create
-2. Choose a unique name (e.g., `mythicc2storage`)
-3. Select region, performance tier (Standard is fine), redundancy (LRS)
-4. Create the storage account
+1. Go to **https://portal.azure.com**
+2. Create a new **Storage Account**
+3. Choose a unique name (e.g., `mythicc2storage123`)
+4. Select **Standard** performance, **LRS** redundancy
+5. Once created, go to **Access Keys** under Security + networking
+6. Save your **storage account name** and **key1**
 
-### 2. Get Account Key
+### 2. Install in Mythic
 
-1. Go to your Storage Account → Access keys
-2. Copy **Key1** or **Key2** (either works)
-3. Keep this secure - it provides full access to the storage account
-
-### 3. Configure Mythic C2 Profile
-
-When building a payload, provide:
-
-| Parameter | Description |
-|-----------|-------------|
-| `storage_account` | Your storage account name (e.g., `mythicc2storage`) |
-| `account_key` | Storage account key (never sent to agent) |
-| `callback_interval` | Polling interval in seconds (default: 30) |
-| `callback_jitter` | Jitter percentage (default: 10) |
-
-### 4. PayloadType Integration
-
-Your agent's `builder.py` must provision the container during build:
-
-```python
-from azure.storage.blob import BlobServiceClient, generate_container_sas, ContainerSasPermissions
-from datetime import datetime, timedelta
-
-# In your build() function:
-container_name = f"agent-{self.uuid[:12].lower()}"
-
-# Create container
-connection_string = f"DefaultEndpointsProtocol=https;AccountName={storage_account};AccountKey={account_key};EndpointSuffix=core.windows.net"
-blob_service = BlobServiceClient.from_connection_string(connection_string)
-blob_service.create_container(container_name)
-
-# Generate container-scoped SAS
-sas_token = generate_container_sas(
-    account_name=storage_account,
-    container_name=container_name,
-    account_key=account_key,
-    permission=ContainerSasPermissions(read=True, write=True, list=True, add=True, create=True),
-    expiry=datetime.utcnow() + timedelta(days=365),
-)
-
-# Stamp into agent: storage_account, container_name, sas_token
-# DO NOT stamp account_key
+```bash
+cd /path/to/Mythic
+sudo ./mythic-cli install github https://github.com/senderend/azureBlob
 ```
+
+### 3. Configure via Mythic Web UI
+
+**One-time: Add Azure credentials**
+1. Edit `/path/to/Mythic/C2_Profiles/azure_blob/c2_code/config.json`:
+   ```json
+   {
+     "storage_account": "YOUR_STORAGE_ACCOUNT",
+     "account_key": "YOUR_ACCOUNT_KEY",
+     "poll_interval": 5
+   }
+   ```
+2. Start the C2 profile: `sudo ./mythic-cli c2 start azure_blob`
+
+**Per-payload: Configure C2 instance in GUI**
+1. In Mythic web UI, go to **C2 Profiles** → **azure_blob**
+2. Create a new profile instance
+3. Set parameters:
+   - **Callback Interval**: 5 seconds (agent check-in frequency)
+   - **Callback Jitter**: 10% (timing variation)
+   - **Kill Date**: 28 days from now (SAS token expiration)
+4. Click **Start**
+
+### 4. Test with Pegasus
+
+Build a test payload in the web UI:
+1. Go to **Payloads** → **Create Payload**
+2. Select **pegasus** PayloadType
+3. Select your **azure_blob** C2 profile instance
+4. Build and run the agent
+
+See `TESTING.md` for complete testing guide.
 
 ## Blob Structure
 
@@ -148,6 +143,86 @@ All agent messages follow the same pattern:
 {"action": "post_response", "responses": [{...}]}
 ```
 
+## Pegasus Test Agent
+
+**Pegasus** is a minimal Python agent included in this repository for two purposes:
+
+1. **Testing** - Verify your Azure Blob C2 profile configuration works
+2. **Template** - Reference implementation for integrating Azure Blob C2 into your own agents
+
+**Features:**
+- Container-scoped SAS token authentication
+- UUID-based message correlation
+- Built-in commands: shell, whoami, pwd, hostname, exit
+- No encryption support (for testing/reference purposes)
+
+**Quick Start:**
+```bash
+cd /path/to/Mythic
+sudo ./mythic-cli install github https://github.com/senderend/azureBlob
+```
+
+See `TESTING.md` for complete setup and testing instructions.
+
+## Integrating into Your Agent
+
+To add Azure Blob C2 support to your own agent, use Pegasus as a reference implementation.
+
+### PayloadType Builder Integration
+
+Your `builder.py` should call the C2 profile's `generate_config` RPC function:
+
+```python
+from mythic_container.MythicRPC import SendMythicRPCOtherServiceRPC, MythicRPCOtherServiceRPCMessage
+
+# In your build() function:
+config_data = await SendMythicRPCOtherServiceRPC(MythicRPCOtherServiceRPCMessage(
+    ServiceName="azure_blob",
+    ServiceRPCFunction="generate_config",
+    ServiceRPCFunctionArguments={
+        "killdate": killdate,  # e.g., "2026-02-01"
+        "payload_uuid": self.uuid
+    }
+))
+
+if config_data.Success:
+    blob_endpoint = config_data.Result['blob_endpoint']
+    container_name = config_data.Result['container_name']
+    sas_token = config_data.Result['sas_token']
+
+    # Stamp these into your agent code
+    # NEVER stamp account_key - it stays on the server
+else:
+    raise Exception(f"Container provisioning failed: {config_data.Error}")
+```
+
+**Reference:** `Payload_Type/pegasus/pegasus/agent_functions/builder.py`
+
+### Agent-Side Implementation
+
+Your agent needs to implement the ats/sta messaging pattern:
+
+```python
+# 1. Generate unique message ID per request
+message_id = uuid.uuid4()
+
+# 2. Send request to ats/ (agent-to-server)
+data = base64.b64encode((agent_uuid + json.dumps(message)).encode())
+put_blob(f"ats/{message_id}.blob", data)
+
+# 3. Poll for response from sta/ (server-to-agent)
+while True:
+    response = get_blob(f"sta/{message_id}.blob")
+    if response:
+        decoded = base64.b64decode(response).decode()
+        response_data = json.loads(decoded[36:])  # Skip UUID prefix
+        delete_blob(f"sta/{message_id}.blob")
+        return response_data
+    time.sleep(callback_interval)
+```
+
+**Reference:** `Payload_Type/pegasus/pegasus/agent_code/agent.py`
+
 ## Comparison with LokiC2
 
 | Capability | LokiC2 (Account SAS) | This Design (Container SAS) |
@@ -161,9 +236,10 @@ All agent messages follow the same pattern:
 ## Troubleshooting
 
 ### Server not seeing agents
-- Verify storage account name and key are correct
+- Verify storage account name and key are correct in config.json
 - Check that containers are being created with `agent-` prefix
 - Ensure Mythic can reach Azure (no firewall blocking)
+- Check C2 server logs: `sudo ./mythic-cli logs azure_blob`
 
 ### Agent cannot upload
 - Verify SAS token has write permissions
@@ -171,5 +247,6 @@ All agent messages follow the same pattern:
 - Ensure container exists
 
 ### Permission errors
-- Agent should have: read, write, list, add, create
-- Agent should NOT have: delete (server handles cleanup)
+- Agent should have: read, write, list, add, create, delete
+- Verify SAS token permissions in generate_config RPC function
+- Check SAS token hasn't expired (based on killdate)

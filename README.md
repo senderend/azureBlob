@@ -47,10 +47,38 @@ agent-{uuid[:12]}/
 
 Messages use UUID-based naming for request/response correlation. Each message is prefixed with the agent's UUID followed by JSON payload.
 
-## Compatible Agents
+## Pegasus Test Agent
 
-This C2 profile requires PayloadType integration to provision Azure containers.
-See documentation for integration guide.
+This repository includes **Pegasus**, a minimal Python agent that serves two purposes:
+
+1. **Test the Azure Blob C2 profile** - Verify your C2 configuration works correctly
+2. **Template for integration** - Reference implementation showing how to integrate Azure Blob C2 into your own agents
+
+### Features
+- Container-scoped SAS token authentication
+- UUID-based message correlation (ats/sta blob structure)
+- Built-in commands: shell, whoami, pwd, hostname, exit
+- No encryption support (for testing/reference purposes)
+
+### Quick Start
+
+See `TESTING.md` for complete setup guide. Key steps:
+
+1. Install C2 profile and Pegasus PayloadType
+2. Configure Azure credentials in Mythic web UI
+3. Build a payload through the GUI
+4. Run and interact with your agent
+
+### Using Pegasus as a Template
+
+To integrate Azure Blob C2 into your own agent:
+
+1. Review `Payload_Type/pegasus/pegasus/agent_functions/builder.py` for PayloadType integration
+2. Review `Payload_Type/pegasus/pegasus/agent_code/agent.py` for agent-side implementation
+3. Implement the RPC call to `generate_config` in your builder
+4. Implement the ats/sta messaging pattern in your agent code
+
+See `documentation-c2/azure_blob/_index.md` for detailed integration guide.
 
 ## Development
 
