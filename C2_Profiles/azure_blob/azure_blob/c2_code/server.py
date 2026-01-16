@@ -20,10 +20,14 @@ from azure.core.exceptions import ResourceNotFoundError
 
 log = logging.getLogger(__name__)
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.WARNING,  # Set root logger to WARNING
     format='%(asctime)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
+# Set our logger to INFO, but suppress Azure SDK verbose logging
+log.setLevel(logging.INFO)
+logging.getLogger('azure').setLevel(logging.WARNING)
+logging.getLogger('azure.core.pipeline.policies.http_logging_policy').setLevel(logging.WARNING)
 
 
 class AzureBlobServer:
