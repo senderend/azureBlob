@@ -9,6 +9,7 @@ Uses account key to access all agent containers (agent-* prefix).
 import asyncio
 import base64
 import json
+import logging
 import os
 import sys
 from pathlib import Path
@@ -16,6 +17,13 @@ from pathlib import Path
 import aiohttp
 from azure.storage.blob import BlobServiceClient
 from azure.core.exceptions import ResourceNotFoundError
+
+log = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 
 
 class AzureBlobServer:
@@ -43,7 +51,7 @@ class AzureBlobServer:
         self.mythic_address = os.environ.get("MYTHIC_ADDRESS", self.mythic_address)
 
         if not self.storage_account or not self.account_key:
-            print("[-] Missing storage_account or account_key configuration")
+            log.error("Missing storage_account or account_key configuration")
             sys.exit(1)
 
         connection_string = (
@@ -68,7 +76,7 @@ class AzureBlobServer:
                 ) as resp:
                     return await resp.read()
             except Exception as e:
-                print(f"[-] Error forwarding to Mythic: {e}")
+                log.error(f"Error forwarding to Mythic: {e}")
                 return b""
 
     async def process_messages(self, container_name: str):
@@ -82,39 +90,28 @@ class AzureBlobServer:
             for blob in blobs:
                 try:
                     blob_client = container_client.get_blob_client(blob.name)
-                    print(f"[*] blob name: {blob_client.url}")
-                    print(f"[*] blob name: {container_name}/{blob.name}")
                     data = blob_client.download_blob().readall()
-                    # Delete processed response
                     blob_client.delete_blob()
+
                     # Forward to Mythic
-                    print(f"[*] data: {data}")
-                    #print(f"[*] mythic message: {base64.b64decode(data).decode()}")
                     response = await self.forward_to_mythic(data)
-                    #print(f"[*] mythic response: {base64.b64decode(response).decode()}")
                     if response:
-                        # Update tasking
-                        response_name = f"{blob.name.replace('ats', 'sta')}"
-                        print(f"[*] writing response to: {response_name}")
+                        response_name = blob.name.replace('ats', 'sta')
                         tasking_blob = container_client.get_blob_client(response_name)
                         tasking_blob.upload_blob(response, overwrite=True)
-                        # Delete processed response
-                        #blob_client.delete_blob()
-
-                    print(f"[+] Processed response from {container_name}: {blob.name}")
 
                 except Exception as e:
-                    print(f"[-] Error processing response {blob.name}: {e}")
+                    log.error(f"Error processing message {blob.name}: {e}")
 
         except Exception as e:
-            print(f"[-] Error listing responses for {container_name}: {e}")
+            log.error(f"Error listing messages for {container_name}: {e}")
 
     async def poll_loop(self):
         """Main polling loop"""
-        print("[*] Azure Blob Storage C2 Server started")
-        print(f"[*] Storage Account: {self.storage_account}")
-        print(f"[*] Mythic Address: {self.mythic_address}")
-        print(f"[*] Poll Interval: {self.poll_interval}s")
+        log.info("Azure Blob Storage C2 Server started")
+        log.info(f"Storage Account: {self.storage_account}")
+        log.info(f"Mythic Address: {self.mythic_address}")
+        log.info(f"Poll Interval: {self.poll_interval}s")
         sys.stdout.flush()
 
         while True:
@@ -126,13 +123,13 @@ class AzureBlobServer:
                     container_name = container.name
 
                     if container_name not in self.known_containers:
-                        print(f"[+] Discovered new agent container: {container_name}")
+                        log.info(f"Discovered new agent container: {container_name}")
                         self.known_containers.add(container_name)
-                    # Process responses
+                    # Process messages
                     await self.process_messages(container_name)
 
             except Exception as e:
-                print(f"[-] Polling error: {e}")
+                log.error(f"Polling error: {e}")
 
             sys.stdout.flush()
             await asyncio.sleep(self.poll_interval)

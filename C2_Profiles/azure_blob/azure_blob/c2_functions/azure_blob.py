@@ -58,8 +58,6 @@ async def generate_config(input: C2OtherServiceRPCMessage) -> C2OtherServiceRPCM
         ),
         expiry=expiration_date,
     )
-    print(f"[*] SAS token: {sas_token}")
-    print(f"[*] Container Name: {container_name}")
 
     blob_endpoint = f"https://{storage_account}.blob.core.windows.net"
 
