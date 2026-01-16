@@ -6,3 +6,4 @@ main
 .claude/
 Payload_Type/azure_test_agent/azure_test_agent/agent_code/medusa_test.py
 Payload_Type/pegasus/pegasus/agent_code/medusa_test.py
+.ruff_cache/
