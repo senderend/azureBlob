@@ -8,12 +8,16 @@ weight = 5
 
 Azure Blob Storage C2 profile for Mythic with **per-agent container isolation**. Each agent gets its own Azure Blob container with a scoped SAS token, limiting blast radius if an agent is compromised.
 
+### Use Case
+
+Many organizations allow outbound traffic to `*.blob.core.windows.net` to support Azure-dependent services. This profile takes advantage of that common exception for C2 communication while providing better operational security than existing approaches through container-scoped tokens.
+
 ### Security Model
 
 - Storage account key **never leaves the Mythic server**
 - Each agent receives a container-scoped SAS token (not account-wide)
 - Compromised agent cannot access other agents' containers
-- Agent cannot: list containers, access other containers, delete blobs
+- SAS token expiration ties to the payload kill date - tokens automatically expire when the payload does
 
 ## Architecture
 
@@ -145,24 +149,12 @@ All agent messages follow the same pattern:
 
 ## Pegasus Test Agent
 
-**Pegasus** is a minimal Python agent included in this repository for two purposes:
+This repository includes **Pegasus**, a minimal Python agent for testing and as a reference implementation. See the Pegasus documentation for details.
 
-1. **Testing** - Verify your Azure Blob C2 profile configuration works
-2. **Template** - Reference implementation for integrating Azure Blob C2 into your own agents
-
-**Features:**
-- Container-scoped SAS token authentication
-- UUID-based message correlation
-- Built-in commands: shell, whoami, pwd, hostname, exit
-- No encryption support (for testing/reference purposes)
-
-**Quick Start:**
 ```bash
 cd /path/to/Mythic
 sudo ./mythic-cli install github https://github.com/senderend/azureBlob
 ```
-
-See `TESTING.md` for complete setup and testing instructions.
 
 ## Integrating into Your Agent
 
@@ -200,7 +192,11 @@ else:
 
 ### Agent-Side Implementation
 
-Your agent needs to implement the ats/sta messaging pattern:
+Your agent needs to implement the ats/sta messaging pattern. Agent communication uses simple HTTP REST calls - no Azure SDK required. The container URL format is:
+
+```
+https://{storage_account}.blob.core.windows.net/{container_name}/{blob_path}?{sas_token}
+```
 
 ```python
 # 1. Generate unique message ID per request
@@ -223,15 +219,21 @@ while True:
 
 **Reference:** `Payload_Type/pegasus/pegasus/agent_code/agent.py`
 
-## Comparison with LokiC2
+## Comparison: Account-Wide vs Container-Scoped Tokens
 
-| Capability | LokiC2 (Account SAS) | This Design (Container SAS) |
+| Capability | Account-Wide SAS | Container-Scoped SAS (this profile) |
 |------------|---------------------|------------------------------|
 | List all containers | Yes | No |
 | Access other agents | Yes | No |
 | Inject commands to others | Yes | No |
 | Delete other agents' data | Yes | No |
 | Blast radius | Entire operation | Single agent |
+
+## Design Notes
+
+**Server-side provisioning:** All Azure infrastructure provisioning (container creation, SAS token generation) happens on the Mythic server during payload build. Agents only perform simple blob operations (PUT/GET/DELETE) against their assigned container - they never call Azure management APIs.
+
+**SOCKS proxy:** When using SOCKS with agents that support this profile, expect throughput around 20 KB/s due to the polling-based architecture. Future work may integrate purpose-built blob transport proxies for improved speeds.
 
 ## Troubleshooting
 
@@ -250,3 +252,7 @@ while True:
 - Agent should have: read, write, list, add, create, delete
 - Verify SAS token permissions in generate_config RPC function
 - Check SAS token hasn't expired (based on killdate)
+
+## Acknowledgments
+
+Thanks to Cody Thomas for Mythic and his developer series, and to Andrew Luke and Paul Kim for their contributions during development.

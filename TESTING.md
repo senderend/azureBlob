@@ -25,7 +25,7 @@ This guide walks through testing the Azure Blob C2 profile using **Pegasus**, a 
    - **Resource group**: Create new or use existing
    - **Storage account name**: Choose a globally unique name (e.g., `mythicc2storage123`)
    - **Region**: Choose one close to your Mythic server
-   - **Performance**: Standard
+   - **Performance**: Standard (or Premium with Block Blobs for production use)
    - **Redundancy**: Locally-redundant storage (LRS)
 4. Click **Review + create** → **Create**
 5. Once deployed, go to your storage account

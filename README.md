@@ -2,6 +2,8 @@
 
 A [Mythic](https://github.com/its-a-feature/Mythic) C2 Profile that uses Azure Blob Storage for command and control communication with **per-agent container isolation**.
 
+Many organizations whitelist `*.blob.core.windows.net` for Azure-dependent services - this profile leverages that common egress exception.
+
 ## Security Model
 
 Unlike other cloud storage C2 approaches that use account-wide credentials, this profile:
