@@ -16,7 +16,7 @@ Unlike other cloud storage C2 approaches that use account-wide credentials, this
 ## Installation
 
 ```bash
-sudo ./mythic-cli install azure_blob https://github.com/senderend/azureBlob
+sudo ./mythic-cli install github https://github.com/senderend/azureBlob
 ```
 
 ## Setup
